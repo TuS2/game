@@ -43,11 +43,10 @@ class Menu(object):
 class Game(object):
     def __init__(self):
         self.about = False
-        self.top = False
         self.game_over = True
         self.score = 0
         self.font = pygame.font.Font(None, 35)
-        self.menu = Menu(("Играть", "Как играть", 'Топ игроки', "Выход"), font_color=(255, 255, 255), font_size=60)
+        self.menu = Menu(("Играть", "Как играть", "Выход"), font_color=(255, 255, 255), font_size=60)
         self.player = Player(32, 128, "player.png")
         self.horizontal_blocks = pygame.sprite.Group()
         self.vertical_blocks = pygame.sprite.Group()
@@ -74,7 +73,7 @@ class Game(object):
         self.game_over_sound = pygame.mixer.Sound("over.ogg")
         self.pacman_sound = pygame.mixer.Sound("275156702_313273693_1906460104.ogg")
 
-    def process_events(self):
+    def process_events(self):  # управление
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return True
@@ -88,8 +87,6 @@ class Game(object):
                         elif self.menu.state == 1:
                             self.about = True
                         elif self.menu.state == 2:
-                            self.top = True
-                        elif self.menu.state == 3:
                             return True
 
                 elif event.key == pygame.K_RIGHT:
@@ -122,32 +119,34 @@ class Game(object):
                 self.player.explosion = True
         return False
 
-    def run_logic(self):
+    def run_logic(self):  # логика игрока
         if not self.game_over:
             self.player.update(self.horizontal_blocks, self.vertical_blocks)
             block_hit_list = pygame.sprite.spritecollide(self.player, self.dots_group, True)
             if len(block_hit_list) > 0:
                 self.pacman_sound.play()
                 self.score += 1
+                if self.score == 142:
+                    self.player.explosion = True
+                    self.game_over_sound.play()
+                    # self.show_go_screen(screen)
             block_hit_list = pygame.sprite.spritecollide(self.player, self.enemies, True)
             if len(block_hit_list) > 0:
                 self.player.explosion = True
                 self.game_over_sound.play()
+                # self.show_go_screen(screen)
             self.game_over = self.player.game_over
             self.enemies.update(self.horizontal_blocks, self.vertical_blocks)
 
+    # менюшка about
     def display_frame(self, screen):
         screen.fill((0, 0, 0))
         if self.game_over:
             if self.about:
-                self.display_message(screen, "Выберите уровень сложности")
                 self.display_message2(screen, "Управление на стрелочки")
-            elif self.top:
-                self.display_message(screen, "Топ игрок: ")
             else:
                 self.menu.display_frame(screen)
         else:
-
             self.horizontal_blocks.draw(screen)
             self.vertical_blocks.draw(screen)
             draw_enviroment(screen)
@@ -158,7 +157,8 @@ class Game(object):
             screen.blit(text, [120, 20])
         pygame.display.flip()
 
-    def display_message(self, screen, message, color=(255, 0, 0)):
+    # вывод сообщения
+    def display_message2(self, screen, message, color=(255, 0, 0)):
         label = self.font.render(message, True, color)
         width = label.get_width()
         height = label.get_height()
@@ -166,16 +166,9 @@ class Game(object):
         posY = (SCREEN_HEIGHT / 2) - (height / 2)
         screen.blit(label, (posX, posY))
 
-    def display_message2(self, screen, message, color=(255, 0, 0)):
-        label = self.font.render(message, True, color)
-        width = label.get_width()
-        height = label.get_height()
-        posX = (SCREEN_WIDTH / 1.8) - (width / 1.8)
-        posY = (SCREEN_HEIGHT / 1.8) - (height / 1.8)
-        screen.blit(label, (posX, posY))
 
 # Enemies
-class Block(pygame.sprite.Sprite):
+class Block(pygame.sprite.Sprite):  # стенки
     def __init__(self, x, y, color, width, height):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.Surface([width, height])
@@ -184,7 +177,7 @@ class Block(pygame.sprite.Sprite):
         self.rect.topleft = (x, y)
 
 
-class Ellipse(pygame.sprite.Sprite):
+class Ellipse(pygame.sprite.Sprite):  # хитбокс
     def __init__(self, x, y, color, width, height):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.Surface([width, height])
@@ -195,7 +188,7 @@ class Ellipse(pygame.sprite.Sprite):
         self.rect.topleft = (x, y)
 
 
-class Ghost(pygame.sprite.Sprite):
+class Ghost(pygame.sprite.Sprite):  # вводные данные для призраков
     def __init__(self, x, y, change_x, change_y):
         pygame.sprite.Sprite.__init__(self)
         self.change_x = change_x
@@ -204,7 +197,7 @@ class Ghost(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.topleft = (x, y)
 
-    def update(self, horizontal_blocks, vertical_blocks):
+    def update(self, horizontal_blocks, vertical_blocks):  # движение призраков
         self.rect.x += self.change_x
         self.rect.y += self.change_y
         if self.rect.right < 0:
@@ -231,7 +224,7 @@ class Ghost(pygame.sprite.Sprite):
                 self.change_x = 0
                 self.change_y = 2
 
-    def get_intersection_position(self):
+    def get_intersection_position(self):  # отслеживание позиций
         items = []
         for i, row in enumerate(enviroment()):
             for j, item in enumerate(row):
@@ -240,7 +233,7 @@ class Ghost(pygame.sprite.Sprite):
         return items
 
 
-def enviroment():
+def enviroment():  # карта
     grid = ((0, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 2, 0),
             (0, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 2, 0),
             (1, 3, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 3, 1),
@@ -263,7 +256,7 @@ def enviroment():
     return grid
 
 
-def draw_enviroment(screen):
+def draw_enviroment(screen):  # рисовка карты
     for i, row in enumerate(enviroment()):
         for j, item in enumerate(row):
             if item == 1:
@@ -281,7 +274,7 @@ class Player(pygame.sprite.Sprite):
     explosion = False
     game_over = False
 
-    def __init__(self, x, y, filename):
+    def __init__(self, x, y, filename):  # входные данные
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.image.load(filename).convert()
         self.image.set_colorkey((0, 0, 0))
@@ -297,7 +290,7 @@ class Player(pygame.sprite.Sprite):
         self.player_image = pygame.image.load(filename).convert()
         self.player_image.set_colorkey((0, 0, 0))
 
-    def update(self, horizontal_blocks, vertical_blocks):
+    def update(self, horizontal_blocks, vertical_blocks):  # передвижение игрока
         if not self.explosion:
             if self.rect.right < 0:
                 self.rect.left = SCREEN_WIDTH
@@ -337,6 +330,7 @@ class Player(pygame.sprite.Sprite):
             self.explosion_animation.update(12)
             self.image = self.explosion_animation.get_current_image()
 
+    # движение
     def move_right(self):
         self.change_x = 3
 
@@ -378,13 +372,13 @@ class Animation(object):
         self.index = 0
         self.clock = 1
 
-    def load_images(self, width, height):
+    def load_images(self, width, height):  # загрузка изобрадений
         for y in range(0, self.sprite_sheet.get_height(), height):
             for x in range(0, self.sprite_sheet.get_width(), width):
                 img = self.get_image(x, y, width, height)
                 self.image_list.append(img)
 
-    def get_image(self, x, y, width, height):
+    def get_image(self, x, y, width, height):  #
         image = pygame.Surface([width, height]).convert()
         image.blit(self.sprite_sheet, (0, 0), (x, y, width, height))
         image.set_colorkey((0, 0, 0))
